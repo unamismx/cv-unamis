@@ -932,7 +932,29 @@ class CvController extends Controller
             return null;
         }
 
-        $absolute = storage_path('app/' . ltrim($storedPath, '/'));
+        $absolute = null;
+        try {
+            $absolute = Storage::disk('local')->path($storedPath);
+        } catch (\Throwable) {
+            $absolute = null;
+        }
+
+        if (! $absolute || ! is_file($absolute)) {
+            // Backward compatibility for legacy stored paths.
+            $legacyCandidates = [
+                storage_path('app/' . ltrim($storedPath, '/')),
+                storage_path('app/private/' . ltrim($storedPath, '/')),
+                storage_path('app/private/' . ltrim(str_replace('private/', '', $storedPath), '/')),
+            ];
+
+            foreach ($legacyCandidates as $candidate) {
+                if (is_file($candidate)) {
+                    $absolute = $candidate;
+                    break;
+                }
+            }
+        }
+
         if (! is_file($absolute) || ! is_readable($absolute)) {
             return null;
         }

@@ -107,7 +107,7 @@ class SignatureController extends Controller
             return back()->with('error', 'La firma está vacía o incompleta. Firma nuevamente.');
         }
 
-        $relativePath = 'private/signatures/user_' . $link->user_id . '.png';
+        $relativePath = 'signatures/user_' . $link->user_id . '.png';
         Storage::disk('local')->put($relativePath, $binary);
 
         $user = $link->user;
