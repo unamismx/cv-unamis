@@ -1,0 +1,7 @@
+source,external_id,institution_type,name,state_name,municipality_name,city_name,country_name
+sep_cct,31DPR0001X,bachillerato,Preparatoria Estatal No. 1,Yucatán,Mérida,Mérida,México
+sep_cct,31DST0002Y,tecnica,CBTIS 120,Yucatán,Mérida,Mérida,México
+sep_cct,31UNI0003Z,universidad,Universidad Autónoma de Yucatán (UADY),Yucatán,Mérida,Mérida,México
+clues,YUCSS000123,hospital,Hospital General Agustín O'Horán,Yucatán,Mérida,Mérida,México
+clues,YUCSS000456,hospital,Unidad de Atención Médica e Investigación en Salud - UNAMIS,Yucatán,Mérida,Mérida,México
+custom,CUST-001,otro,Centro de Capacitación Interna UNAMIS,Yucatán,Mérida,Mérida,México

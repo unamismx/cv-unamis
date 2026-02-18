@@ -1,0 +1,8 @@
+id,nombre_es,nombre_en,tipo
+ESP-001,Medicina Interna,Internal Medicine,especialidad_medica
+ESP-002,Pediatría,Pediatrics,especialidad_medica
+CAR-001,Médico Cirujano,MD,carrera_salud
+CAR-002,Enfermería,Nursing,carrera_salud
+TEC-001,Técnico Laboratorista Clínico,Clinical Laboratory Technician,carrera_tecnica
+BAC-001,Bachillerato General,General High School Diploma,bachillerato
+OTR-001,Gestión Administrativa,Administrative Management,otro
