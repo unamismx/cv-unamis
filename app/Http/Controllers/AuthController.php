@@ -6,9 +6,12 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Carbon\Carbon;
 use Laravel\Socialite\Facades\Socialite;
 use Throwable;
 
@@ -29,7 +32,16 @@ class AuthController extends Controller
     public function redirectToGoogle()
     {
         return Socialite::driver('google')
-            ->scopes(['openid', 'email', 'profile'])
+            ->scopes([
+                'openid',
+                'email',
+                'profile',
+                'https://www.googleapis.com/auth/gmail.send',
+            ])
+            ->with([
+                'access_type' => 'offline',
+                'prompt' => 'consent',
+            ])
             ->stateless()
             ->redirect();
     }
@@ -81,6 +93,18 @@ class AuthController extends Controller
                 'email' => 'Tu cuenta está inactiva. Contacta al administrador.',
             ]);
         }
+
+        DB::table('google_accounts')->updateOrInsert(
+            ['user_id' => $user->id],
+            [
+                'google_id' => $googleUser->getId(),
+                'access_token' => Crypt::encryptString((string) $googleUser->token),
+                'refresh_token' => ! empty($googleUser->refreshToken) ? Crypt::encryptString((string) $googleUser->refreshToken) : null,
+                'token_expires_at' => ! empty($googleUser->expiresIn) ? Carbon::now()->addSeconds((int) $googleUser->expiresIn) : null,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
 
         Auth::login($user, true);
         $request->session()->regenerate();

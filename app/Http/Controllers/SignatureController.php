@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\SignatureCaptureLink;
+use Google\Client as GoogleClient;
+use Google\Service\Gmail as GoogleGmail;
+use Google\Service\Gmail\Message as GmailMessage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -34,18 +38,16 @@ class SignatureController extends Controller
         ]);
 
         $captureUrl = route('signature.capture.form', ['token' => $plainToken]);
-        $sentError = null;
+        $sentError = $this->sendMailViaGmailApi(
+            $user->id,
+            $targetEmail,
+            'CV UNAMIS - Enlace de captura de firma',
+            "Captura tu firma para CV UNAMIS.\n\nAbre este enlace en tu móvil o tablet:\n{$captureUrl}\n\nEste enlace expira en 24 horas."
+        );
 
-        try {
-            Mail::raw(
-                "Captura tu firma para CV UNAMIS.\n\nAbre este enlace en tu móvil o tablet:\n{$captureUrl}\n\nEste enlace expira en 24 horas.",
-                function ($message) use ($targetEmail) {
-                    $message->to($targetEmail)->subject('CV UNAMIS - Enlace de captura de firma');
-                }
-            );
+        if ($sentError === null) {
             $link->sent_at = Carbon::now();
-        } catch (\Throwable $e) {
-            $sentError = mb_substr($e->getMessage(), 0, 255);
+        } else {
             $link->sent_error = $sentError;
         }
 
@@ -135,5 +137,66 @@ class SignatureController extends Controller
         return SignatureCaptureLink::query()
             ->where('token_hash', hash('sha256', $token))
             ->first();
+    }
+
+    private function sendMailViaGmailApi(int $userId, string $to, string $subject, string $body): ?string
+    {
+        try {
+            $account = DB::table('google_accounts')->where('user_id', $userId)->first();
+            if (! $account) {
+                return 'No existe token de Google. Cierra sesión y vuelve a entrar con Google para autorizar Gmail.';
+            }
+
+            $client = new GoogleClient();
+            $client->setHttpClient(new \GuzzleHttp\Client([
+                'timeout' => 10,
+                'connect_timeout' => 5,
+            ]));
+            $client->setClientId(config('services.google.client_id'));
+            $client->setClientSecret(config('services.google.client_secret'));
+            $client->setRedirectUri(config('services.google.redirect'));
+
+            $client->setAccessToken(Crypt::decryptString((string) $account->access_token));
+            if ($client->isAccessTokenExpired()) {
+                if (empty($account->refresh_token)) {
+                    return 'El token de Google expiró y no hay refresh token. Cierra sesión y vuelve a entrar con Google.';
+                }
+
+                $refreshToken = Crypt::decryptString((string) $account->refresh_token);
+                $newToken = $client->fetchAccessTokenWithRefreshToken($refreshToken);
+                if (isset($newToken['error'])) {
+                    return 'Google rechazó refrescar token: ' . (string) $newToken['error'];
+                }
+
+                if (! empty($newToken['access_token'])) {
+                    DB::table('google_accounts')->where('user_id', $userId)->update([
+                        'access_token' => Crypt::encryptString((string) $newToken['access_token']),
+                        'token_expires_at' => now()->addSeconds((int) ($newToken['expires_in'] ?? 3600)),
+                        'updated_at' => now(),
+                    ]);
+                    $client->setAccessToken((string) $newToken['access_token']);
+                }
+            }
+
+            $gmail = new GoogleGmail($client);
+            $from = (string) (auth()->user()?->email ?? config('mail.from.address'));
+            $encodedSubject = mb_encode_mimeheader($subject, 'UTF-8');
+
+            $raw = "From: CV UNAMIS <{$from}>\r\n";
+            $raw .= "To: {$to}\r\n";
+            $raw .= "Subject: {$encodedSubject}\r\n";
+            $raw .= "MIME-Version: 1.0\r\n";
+            $raw .= "Content-Type: text/plain; charset=UTF-8\r\n";
+            $raw .= "Content-Transfer-Encoding: base64\r\n\r\n";
+            $raw .= chunk_split(base64_encode($body));
+
+            $msg = new GmailMessage();
+            $msg->setRaw(rtrim(strtr(base64_encode($raw), '+/', '-_'), '='));
+            $gmail->users_messages->send('me', $msg);
+
+            return null;
+        } catch (\Throwable $e) {
+            return mb_substr($e->getMessage(), 0, 255);
+        }
     }
 }
