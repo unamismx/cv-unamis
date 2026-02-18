@@ -9,6 +9,7 @@ use App\Models\CvImportJob;
 use App\Models\CvLocalization;
 use App\Models\CvDocumentSeal;
 use App\Models\CvVersion;
+use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -547,6 +548,7 @@ class CvController extends Controller
             'institutionalAddress' => config('cv.institutional_address'),
             'locale' => $locale,
             'seal' => $seal,
+            'signatureDataUri' => $this->buildSignatureDataUri($cv->user),
         ])->setPaper('a4')
             ->setOption('isRemoteEnabled', true)
             ->setOption('isPhpEnabled', true)
@@ -917,6 +919,30 @@ class CvController extends Controller
     {
         $raw = config('app.key', 'unamis-fallback-key');
         return str_starts_with($raw, 'base64:') ? base64_decode(substr($raw, 7)) ?: $raw : $raw;
+    }
+
+    private function buildSignatureDataUri(?User $user): ?string
+    {
+        if (! $user) {
+            return null;
+        }
+
+        $storedPath = trim((string) ($user->signature_file_path ?? ''));
+        if ($storedPath === '') {
+            return null;
+        }
+
+        $absolute = storage_path('app/' . ltrim($storedPath, '/'));
+        if (! is_file($absolute) || ! is_readable($absolute)) {
+            return null;
+        }
+
+        $binary = @file_get_contents($absolute);
+        if (! is_string($binary) || $binary === '') {
+            return null;
+        }
+
+        return 'data:image/png;base64,' . base64_encode($binary);
     }
 
     private function extractTextFromDocx(string $path): string

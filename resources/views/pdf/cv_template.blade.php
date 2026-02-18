@@ -169,14 +169,7 @@
         return $text;
     };
 
-    $signatureImagePath = null;
-    $signatureStoredPath = trim((string) ($cv->user->signature_file_path ?? ''));
-    if ($signatureStoredPath !== '') {
-        $candidate = storage_path('app/' . ltrim($signatureStoredPath, '/'));
-        if (file_exists($candidate)) {
-            $signatureImagePath = $candidate;
-        }
-    }
+    $signatureImagePath = $signatureDataUri ?? null;
   @endphp
 
   <div class="fixed-header">
