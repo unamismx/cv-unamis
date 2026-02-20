@@ -12,7 +12,7 @@
       flex-wrap: wrap;
       gap: 12px;
       margin-bottom: 12px;
-      align-items: flex-end;
+      align-items: flex-start;
     }
     #cv-form .field-block {
       display: flex;
@@ -48,6 +48,12 @@
       min-height: 44px;
       padding-top: 26px;
       white-space: nowrap;
+    }
+    #cv-form .other-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 8px;
     }
     @media (max-width: 980px) {
       #cv-form .field-block,
@@ -410,7 +416,7 @@
               <option value="__other__" @selected($professionIsOther)>Other / Otro</option>
             </select>
             <div id="profession-other-fields" style="{{ $professionIsOther ? '' : 'display:none;' }}">
-              <div class="section-row" style="margin-top:8px;">
+              <div class="other-grid">
                 <label class="field-block">
                   <span>Other (ES)</span>
                   <input type="text" name="es[profession_other_es]" value="{{ $professionOtherEs }}">
@@ -432,7 +438,7 @@
               <option value="__other__" @selected($positionIsOther)>Other / Otro</option>
             </select>
             <div id="position-other-fields" style="{{ $positionIsOther ? '' : 'display:none;' }}">
-              <div class="section-row" style="margin-top:8px;">
+              <div class="other-grid">
                 <label class="field-block">
                   <span>Other (ES)</span>
                   <input type="text" name="es[position_other_es]" value="{{ $positionOtherEs }}">
@@ -484,7 +490,7 @@
                     <option value="__other__" @selected($educationDegreeIsOther)>Other / Otro</option>
                   </select>
                   <div id="education-{{ $idx }}-degree-other-fields" style="{{ $educationDegreeIsOther ? '' : 'display:none;' }}">
-                    <div class="section-row" style="margin-top:8px;">
+                    <div class="other-grid">
                       <label class="field-block">
                         <span>Other (ES)</span>
                         <input type="text" name="es[educations][{{ $idx }}][degree_other_es]" value="{{ $educationDegreeOtherEs }}">
@@ -532,7 +538,7 @@
                     <option value="__other__" @selected($professionalPositionIsOther)>Other / Otro</option>
                   </select>
                   <div id="professional-{{ $idx }}-position-other-fields" style="{{ $professionalPositionIsOther ? '' : 'display:none;' }}">
-                    <div class="section-row" style="margin-top:8px;">
+                    <div class="other-grid">
                       <label class="field-block">
                         <span>Other (ES)</span>
                         <input type="text" name="es[professional_experience][{{ $idx }}][position_other_es]" value="{{ $professionalPositionOtherEs }}">
@@ -589,7 +595,7 @@
                     <option value="__other__" @selected($therapeuticIsOther)>Other / Otro</option>
                   </select>
                   <div id="clinical-{{ $idx }}-therapeutic-other-fields" style="{{ $therapeuticIsOther ? '' : 'display:none;' }}">
-                    <div class="section-row" style="margin-top:8px;">
+                    <div class="other-grid">
                       <label class="field-block">
                         <span>Other (ES)</span>
                         <input type="text" name="es[clinical_research][{{ $idx }}][therapeutic_area_other_es]" value="{{ $therapeuticOtherEs }}">
@@ -618,7 +624,7 @@
                     <option value="__other__" @selected($roleIsOther)>Other / Otro</option>
                   </select>
                   <div id="clinical-{{ $idx }}-role-other-fields" style="{{ $roleIsOther ? '' : 'display:none;' }}">
-                    <div class="section-row" style="margin-top:8px;">
+                    <div class="other-grid">
                       <label class="field-block">
                         <span>Other (ES)</span>
                         <input type="text" name="es[clinical_research][{{ $idx }}][role_other_es]" value="{{ $roleOtherEs }}">
@@ -870,7 +876,7 @@
       const selectHtml = renderCatalogSelect(name, options, placeholder, true, prefix);
       return `${selectHtml}
         <div id="${prefix}-other-fields" style="display:none;">
-          <div class="section-row" style="margin-top:8px;">
+          <div class="other-grid">
             <label class="field-block"><span>Other (ES)</span><input type="text" name="${name.replace(/\]$/, '_other_es]')}"></label>
             <label class="field-block"><span>Other (EN)</span><input type="text" name="${name.replace(/\]$/, '_other_en]')}"></label>
           </div>
@@ -1094,7 +1100,14 @@
         const wrapper = document.getElementById(`${prefix}-other-fields`);
         if (!wrapper) return;
         const sync = () => {
-          wrapper.style.display = select.value === '__other__' ? '' : 'none';
+          const visible = select.value === '__other__';
+          wrapper.style.display = visible ? '' : 'none';
+          wrapper.querySelectorAll('input').forEach((input) => {
+            input.disabled = !visible;
+            if (!visible) {
+              input.value = '';
+            }
+          });
         };
         select.addEventListener('change', sync);
         sync();
