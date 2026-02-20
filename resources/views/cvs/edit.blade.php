@@ -1143,6 +1143,67 @@
       });
     }
 
+    const cvForm = document.getElementById('cv-form');
+    let hasUnsavedChanges = false;
+    let isExplicitlySubmittingCvForm = false;
+    const unsavedMsg = 'Tienes cambios sin guardar. Si sales ahora, se perderán.';
+
+    function markUnsavedChanges() {
+      if (!isExplicitlySubmittingCvForm) {
+        hasUnsavedChanges = true;
+      }
+    }
+
+    if (cvForm) {
+      cvForm.addEventListener('input', markUnsavedChanges);
+      cvForm.addEventListener('change', markUnsavedChanges);
+      cvForm.addEventListener('submit', () => {
+        isExplicitlySubmittingCvForm = true;
+        hasUnsavedChanges = false;
+      });
+    }
+
+    window.addEventListener('beforeunload', (event) => {
+      if (!hasUnsavedChanges || isExplicitlySubmittingCvForm) {
+        return;
+      }
+      event.preventDefault();
+      event.returnValue = unsavedMsg;
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!hasUnsavedChanges || isExplicitlySubmittingCvForm) {
+        return;
+      }
+      const link = event.target.closest('a[href]');
+      if (!link) {
+        return;
+      }
+      const href = link.getAttribute('href') || '';
+      if (href.startsWith('#') || href.startsWith('javascript:')) {
+        return;
+      }
+      if (!window.confirm(unsavedMsg)) {
+        event.preventDefault();
+      }
+    });
+
+    document.addEventListener('submit', (event) => {
+      if (!hasUnsavedChanges || isExplicitlySubmittingCvForm) {
+        return;
+      }
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) {
+        return;
+      }
+      if (form.id === 'cv-form') {
+        return;
+      }
+      if (!window.confirm(unsavedMsg)) {
+        event.preventDefault();
+      }
+    });
+
     bindMexPhoneField({
       inputId: 'es-office-phone-national',
       countryId: 'es-office-country',
