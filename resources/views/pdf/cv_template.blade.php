@@ -142,6 +142,24 @@
         return $translated !== '' ? $translated : '-';
     };
 
+    $renderCatalogAwareValue = function ($value, string $taxonomyKey) use ($locale, $taxonomyMaps, $translateToEnglish) {
+        $text = trim((string) ($value ?? ''));
+        if ($text === '') {
+            return '-';
+        }
+        if ($locale !== 'en') {
+            return $text;
+        }
+
+        $map = $taxonomyMaps[$taxonomyKey] ?? [];
+        $mapped = $map[mb_strtolower($text)] ?? null;
+        if (is_string($mapped) && trim($mapped) !== '') {
+            return trim($mapped);
+        }
+
+        return $translateToEnglish($text);
+    };
+
     $renderValue = function ($value, bool $translate = false) use ($locale, $translateToEnglish) {
         $text = trim((string) ($value ?? ''));
         if ($text === '') {
@@ -273,12 +291,12 @@
 
     <div class="section">
       <div class="section-title">{{ $labels['profession'] }}</div>
-      <div class="value">{{ $renderValue($loc->profession_label, true) }}</div>
+      <div class="value">{{ $renderCatalogAwareValue($loc->profession_label, 'professions') }}</div>
     </div>
 
     <div class="section">
       <div class="section-title">{{ $labels['position'] }}</div>
-      <div class="value">{{ $renderValue($loc->position_label, true) }}</div>
+      <div class="value">{{ $renderCatalogAwareValue($loc->position_label, 'study_positions') }}</div>
     </div>
 
     <div class="section">
@@ -316,7 +334,7 @@
                 <td>{{ trim($institutionName) ?: '-' }}</td>
                 <td>{{ trim($institutionPlace) ?: '-' }}</td>
                 <td>{{ $formatIndustryDate($edu->start_date ?: ($edu->start_year ? ($edu->start_year . '-01-01') : null)) }} - {{ $edu->is_ongoing ? ($locale === 'es' ? 'En curso' : 'Ongoing') : $formatIndustryDate($edu->end_date ?: ($edu->end_year ? ($edu->end_year . '-12-31') : null)) }}</td>
-                <td>{{ $renderValue($edu->degree_other, true) }}</td>
+                <td>{{ $renderCatalogAwareValue($edu->degree_other, 'education_degrees') }}</td>
                 <td>{{ !empty($edu->license_not_applicable) ? ($locale === 'es' ? 'No aplica' : 'Not applicable') : $renderValue($edu->license_number) }}</td>
               </tr>
             @endforeach
@@ -344,7 +362,7 @@
           @forelse($professional as $row)
             <tr>
               <td>{{ $row['institution'] ?? '-' }}</td>
-              <td>{{ $renderValue($row['position'] ?? '-', true) }}</td>
+              <td>{{ $renderCatalogAwareValue($row['position'] ?? '-', 'study_positions') }}</td>
               <td>{{ $formatIndustryDate($row['start_year'] ?? null) }} - {{ !empty($row['is_ongoing']) ? ($locale === 'es' ? 'En curso' : 'Ongoing') : $formatIndustryDate($row['end_year'] ?? null) }}</td>
             </tr>
           @empty
@@ -372,8 +390,8 @@
           @forelse($clinical as $row)
             <tr>
               <td>{{ $renderYearValue($row['start_year'] ?? null) }} - {{ !empty($row['is_ongoing']) ? ($locale === 'es' ? 'En curso' : 'Ongoing') : $renderYearValue($row['end_year'] ?? null) }}</td>
-              <td>{{ $renderValue($row['therapeutic_area'] ?? '-', true) }}</td>
-              <td>{{ $renderValue($row['role'] ?? '-', true) }}</td>
+              <td>{{ $renderCatalogAwareValue($row['therapeutic_area'] ?? '-', 'therapeutic_areas') }}</td>
+              <td>{{ $renderCatalogAwareValue($row['role'] ?? '-', 'study_roles') }}</td>
               <td>{{ $renderValue($row['phase'] ?? '-') }}</td>
             </tr>
           @empty

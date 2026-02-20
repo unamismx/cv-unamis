@@ -606,6 +606,13 @@ class CvController extends Controller
             'locale' => $locale,
             'seal' => $seal,
             'signatureDataUri' => $this->buildSignatureDataUri($cv->user),
+            'taxonomyMaps' => [
+                'professions' => $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_PROFESSIONS),
+                'study_positions' => $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_STUDY_POSITIONS),
+                'study_roles' => $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_STUDY_ROLES),
+                'therapeutic_areas' => $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_THERAPEUTIC_AREAS),
+                'education_degrees' => $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_EDUCATION_DEGREES),
+            ],
         ])->setPaper('a4')
             ->setOption('isRemoteEnabled', true)
             ->setOption('isPhpEnabled', true)
