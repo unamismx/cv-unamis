@@ -39,6 +39,20 @@
           </tbody>
         </table>
       </div>
+
+      @if(!empty($downloadLinks))
+        <div style="margin-top:16px;">
+          <h2 style="margin:0 0 8px 0; font-size:1.05rem;">Descargar CV</h2>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            @if(!empty($downloadLinks['es']))
+              <a class="btn-secondary" href="{{ $downloadLinks['es'] }}">Descargar PDF ES</a>
+            @endif
+            @if(!empty($downloadLinks['en']))
+              <a class="btn-secondary" href="{{ $downloadLinks['en'] }}">Download PDF EN</a>
+            @endif
+          </div>
+        </div>
+      @endif
     </div>
   </div>
 </body>

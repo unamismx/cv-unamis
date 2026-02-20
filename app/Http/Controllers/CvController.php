@@ -738,6 +738,7 @@ class CvController extends Controller
 
         $cv = Cv::find($seal->cv_id);
         $hashMatchesCurrent = false;
+        $downloadLinks = [];
         if ($cv) {
             $cv->load(['localizations.educations', 'localizations.gcpCertifications']);
             $loc = $cv->localizations->firstWhere('locale', $seal->locale);
@@ -745,12 +746,24 @@ class CvController extends Controller
                 $currentHash = $this->buildCvHash($cv, $loc, $seal->locale);
                 $hashMatchesCurrent = hash_equals($currentHash, $seal->hash_sha256);
             }
+
+            if ($cv->status === 'published') {
+                $hasEs = $cv->localizations->contains(fn (CvLocalization $l) => $l->locale === 'es');
+                $hasEn = $cv->localizations->contains(fn (CvLocalization $l) => $l->locale === 'en');
+                if ($hasEs) {
+                    $downloadLinks['es'] = url('/cvs/verify/' . urlencode($seal->folio) . '/pdf/es');
+                }
+                if ($hasEn || $hasEs) {
+                    $downloadLinks['en'] = url('/cvs/verify/' . urlencode($seal->folio) . '/pdf/en');
+                }
+            }
         }
 
         return view('cvs.verify', [
             'signatureValid' => $signatureValid,
             'hashMatchesCurrent' => $hashMatchesCurrent,
             'found' => true,
+            'downloadLinks' => $downloadLinks,
             'data' => [
                 'folio' => $seal->folio,
                 'cv' => $seal->cv_id,
@@ -761,6 +774,20 @@ class CvController extends Controller
                 'sig' => $seal->signature_hmac,
             ],
         ]);
+    }
+
+    public function downloadVerifiedPdf(string $folio, string $locale)
+    {
+        $seal = CvDocumentSeal::where('folio', $folio)->firstOrFail();
+        $cv = Cv::query()
+            ->with(['localizations.educations', 'localizations.gcpCertifications'])
+            ->findOrFail($seal->cv_id);
+
+        if ($cv->status !== 'published') {
+            abort(403);
+        }
+
+        return $this->buildPdfDownloadResponse($cv, $locale, '/cvs/verify?folio=' . urlencode($seal->folio));
     }
 
     private function translatePayloadToEnglish(array $es, array $manualEnOverrides = []): array

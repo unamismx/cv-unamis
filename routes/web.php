@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
 Route::get('/cvs/verify', [CvController::class, 'verifySeal']);
+Route::get('/cvs/verify/{folio}/pdf/{locale}', [CvController::class, 'downloadVerifiedPdf']);
 Route::get('/firma/captura/{token}', [SignatureController::class, 'showCaptureForm'])->name('signature.capture.form');
 Route::post('/firma/captura/{token}', [SignatureController::class, 'storeCapture'])->name('signature.capture.store');
 
