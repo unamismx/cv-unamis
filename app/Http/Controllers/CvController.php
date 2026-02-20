@@ -677,7 +677,7 @@ class CvController extends Controller
                 'position' => 'POSITION',
                 'education' => 'EDUCATION AND TRAINING',
                 'professional' => 'PROFESSIONAL EXPERIENCE',
-                'clinical' => 'CLINICAL INVESTIGATION RESEARCH',
+                'clinical' => 'CLINICAL RESEARCH EXPERIENCE',
                 'training' => 'TRAINING DOCUMENTATION',
                 'gcp' => 'GCP CERTIFICATIONS',
                 'date' => 'DATE',
