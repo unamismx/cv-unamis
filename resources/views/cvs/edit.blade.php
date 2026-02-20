@@ -509,6 +509,14 @@
           <h3>Experiencia Profesional (ES)</h3>
           <div id="prof-es-wrapper">
             @foreach($esProfessional as $idx => $row)
+              @php
+                $professionalRowEn = $enProfessional[$idx] ?? [];
+                $selectedProfessionalPosition = $row['position'] ?? '';
+                $professionalPositionEsList = collect($studyPositionOptions)->pluck('es')->filter()->values()->all();
+                $professionalPositionIsOther = ($selectedProfessionalPosition !== '' && !in_array($selectedProfessionalPosition, $professionalPositionEsList, true)) || $selectedProfessionalPosition === '__other__';
+                $professionalPositionOtherEs = old("es.professional_experience.$idx.position_other_es", $professionalPositionIsOther && $selectedProfessionalPosition !== '__other__' ? $selectedProfessionalPosition : '');
+                $professionalPositionOtherEn = old("es.professional_experience.$idx.position_other_en", $professionalPositionIsOther ? (($professionalRowEn['position'] ?? '') ?: '') : '');
+              @endphp
               <div class="section-row section-5">
                 <label class="field-block wide">
                   <span>Institución</span>
@@ -516,7 +524,25 @@
                 </label>
                 <label class="field-block">
                   <span>Puesto / Cargo</span>
-                  <input type="text" name="es[professional_experience][{{ $idx }}][position]" value="{{ $row['position'] ?? '' }}">
+                  <select name="es[professional_experience][{{ $idx }}][position]" class="taxonomy-select" data-other-prefix="professional-{{ $idx }}-position">
+                    <option value="">Seleccionar</option>
+                    @foreach($studyPositionOptions as $option)
+                      <option value="{{ $option['es'] }}" @selected($selectedProfessionalPosition === ($option['es'] ?? ''))>{{ $option['es'] ?? '' }}</option>
+                    @endforeach
+                    <option value="__other__" @selected($professionalPositionIsOther)>Other / Otro</option>
+                  </select>
+                  <div id="professional-{{ $idx }}-position-other-fields" style="{{ $professionalPositionIsOther ? '' : 'display:none;' }}">
+                    <div class="section-row" style="margin-top:8px;">
+                      <label class="field-block">
+                        <span>Other (ES)</span>
+                        <input type="text" name="es[professional_experience][{{ $idx }}][position_other_es]" value="{{ $professionalPositionOtherEs }}">
+                      </label>
+                      <label class="field-block">
+                        <span>Other (EN)</span>
+                        <input type="text" name="es[professional_experience][{{ $idx }}][position_other_en]" value="{{ $professionalPositionOtherEn }}">
+                      </label>
+                    </div>
+                  </div>
                 </label>
                 <label class="field-block">
                   <span>Fecha de inicio</span>
@@ -972,11 +998,13 @@
       const row = document.createElement('div');
       row.className = 'section-row section-5';
       const endId = `${locale}-professional-${idx}-end`;
+      const positionSelectEs = renderCatalogSelectWithOther(`es[professional_experience][${idx}][position]`, studyPositionOptions, `professional-${idx}-position`, 'Seleccionar');
       row.innerHTML = locale === 'es'
-        ? `<label class="field-block wide"><span>Institución</span><input type="text" name="es[professional_experience][${idx}][institution]"></label><label class="field-block"><span>Puesto / Cargo</span><input type="text" name="es[professional_experience][${idx}][position]"></label><label class="field-block"><span>Fecha de inicio</span><input type="date" name="es[professional_experience][${idx}][start_year]"></label><label class="field-block"><span>Fecha de término</span><input type="date" id="${endId}" name="es[professional_experience][${idx}][end_year]"></label><label class="field-check"><input class="ongoing-toggle" data-end-id="${endId}" type="checkbox" name="es[professional_experience][${idx}][is_ongoing]" value="1"> En curso</label>`
+        ? `<label class="field-block wide"><span>Institución</span><input type="text" name="es[professional_experience][${idx}][institution]"></label><label class="field-block"><span>Puesto / Cargo</span>${positionSelectEs}</label><label class="field-block"><span>Fecha de inicio</span><input type="date" name="es[professional_experience][${idx}][start_year]"></label><label class="field-block"><span>Fecha de término</span><input type="date" id="${endId}" name="es[professional_experience][${idx}][end_year]"></label><label class="field-check"><input class="ongoing-toggle" data-end-id="${endId}" type="checkbox" name="es[professional_experience][${idx}][is_ongoing]" value="1"> En curso</label>`
         : `<label class="field-block wide"><span>Institution</span><input type="text" name="en[professional_experience][${idx}][institution]"></label><label class="field-block"><span>Position</span><input type="text" name="en[professional_experience][${idx}][position]"></label><label class="field-block"><span>Start date</span><input type="date" name="en[professional_experience][${idx}][start_year]"></label><label class="field-block"><span>End date</span><input type="date" id="${endId}" name="en[professional_experience][${idx}][end_year]"></label><label class="field-check"><input class="ongoing-toggle" data-end-id="${endId}" type="checkbox" name="en[professional_experience][${idx}][is_ongoing]" value="1"> Ongoing</label>`;
       wrapper.appendChild(row);
       bindOngoingToggles(row);
+      bindTaxonomyOtherToggles(row);
     }
 
     function addClinicalRow(locale) {

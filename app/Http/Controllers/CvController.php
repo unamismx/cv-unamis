@@ -83,6 +83,8 @@ class CvController extends Controller
             'es.professional_experience' => ['nullable', 'array'],
             'es.professional_experience.*.institution' => ['nullable', 'string', 'max:220'],
             'es.professional_experience.*.position' => ['nullable', 'string', 'max:220'],
+            'es.professional_experience.*.position_other_es' => ['nullable', 'string', 'max:220'],
+            'es.professional_experience.*.position_other_en' => ['nullable', 'string', 'max:220'],
             'es.professional_experience.*.start_year' => ['nullable', 'date_format:Y-m-d'],
             'es.professional_experience.*.end_year' => ['nullable', 'date_format:Y-m-d'],
             'es.professional_experience.*.is_ongoing' => ['nullable', 'boolean'],
@@ -183,6 +185,11 @@ class CvController extends Controller
         foreach (($esInput['educations'] ?? []) as $index => $row) {
             if (($row['degree_other'] ?? null) === '__other__' && trim((string) ($row['degree_other_es'] ?? '')) === '') {
                 $otherErrors["es.educations.$index.degree_other_es"] = 'Captura el valor ES del grado obtenido cuando eliges Other.';
+            }
+        }
+        foreach (($esInput['professional_experience'] ?? []) as $index => $row) {
+            if (($row['position'] ?? null) === '__other__' && trim((string) ($row['position_other_es'] ?? '')) === '') {
+                $otherErrors["es.professional_experience.$index.position_other_es"] = 'Captura el valor ES del puesto/cargo cuando eliges Other.';
             }
         }
 
@@ -861,6 +868,23 @@ class CvController extends Controller
             );
             if ($degreeEn !== '') {
                 $overrides["educations.$i.degree_other"] = $degreeEn;
+            }
+        }
+
+        foreach (($es['professional_experience'] ?? []) as $i => $row) {
+            [$professionalPositionEs, $professionalPositionEn] = $this->resolveTaxonomyValue(
+                $row['position'] ?? null,
+                $row['position_other_es'] ?? null,
+                $row['position_other_en'] ?? null,
+                $positionMap
+            );
+            $es['professional_experience'][$i]['position'] = $professionalPositionEs ?: null;
+            unset(
+                $es['professional_experience'][$i]['position_other_es'],
+                $es['professional_experience'][$i]['position_other_en']
+            );
+            if ($professionalPositionEn !== '') {
+                $overrides["professional_experience.$i.position"] = $professionalPositionEn;
             }
         }
 
