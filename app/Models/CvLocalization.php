@@ -18,6 +18,7 @@ class CvLocalization extends Model
         'office_phone',
         'fax_number',
         'email',
+        'profession_label',
         'position_label',
         'summary_text',
         'professional_experience_json',

@@ -272,6 +272,11 @@
     </div>
 
     <div class="section">
+      <div class="section-title">{{ $labels['profession'] }}</div>
+      <div class="value">{{ $renderValue($loc->profession_label, true) }}</div>
+    </div>
+
+    <div class="section">
       <div class="section-title">{{ $labels['position'] }}</div>
       <div class="value">{{ $renderValue($loc->position_label, true) }}</div>
     </div>

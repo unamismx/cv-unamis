@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CvController;
+use App\Http\Controllers\CvTaxonomyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SignatureController;
 use Illuminate\Support\Facades\Route;
@@ -31,4 +32,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/cvs/me/import', [CvController::class, 'importWord']);
     Route::post('/cvs/me/versions/{version}/restore', [CvController::class, 'restoreVersion']);
     Route::post('/cvs/me/publish', [CvController::class, 'publish']);
+
+    Route::middleware('cv.taxonomy.admin')->group(function () {
+        Route::get('/admin/cv-taxonomies', [CvTaxonomyController::class, 'index']);
+        Route::post('/admin/cv-taxonomies', [CvTaxonomyController::class, 'store']);
+        Route::patch('/admin/cv-taxonomies/{term}', [CvTaxonomyController::class, 'update']);
+        Route::delete('/admin/cv-taxonomies/{term}', [CvTaxonomyController::class, 'destroy']);
+    });
 });

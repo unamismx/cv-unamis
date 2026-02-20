@@ -50,4 +50,9 @@ class User extends Authenticatable
     {
         return $this->role === 'admin';
     }
+
+    public function canManageCvTaxonomies(): bool
+    {
+        return mb_strtolower(trim((string) $this->email)) === 'jrivera@unamis.com.mx';
+    }
 }

@@ -253,6 +253,11 @@
         ];
       }
 
+      $professionOptions = $taxonomyOptions['professions'] ?? [];
+      $studyPositionOptions = $taxonomyOptions['study_positions'] ?? [];
+      $studyRoleOptions = $taxonomyOptions['study_roles'] ?? [];
+      $therapeuticAreaOptions = $taxonomyOptions['therapeutic_areas'] ?? [];
+
       $rawTitleName = trim((string) old('es.title_name', $es->title_name ?? ''));
       $esTitlePrefix = '';
       $esFullName = $rawTitleName;
@@ -287,6 +292,18 @@
         $esFaxDigits = substr($esFaxDigits, -10);
       }
       $esFaxNational = $esFaxDigits;
+
+      $professionEsList = collect($professionOptions)->pluck('es')->filter()->values()->all();
+      $selectedProfession = old('es.profession_label', $es->profession_label ?? '');
+      $professionIsOther = ($selectedProfession !== '' && !in_array($selectedProfession, $professionEsList, true)) || $selectedProfession === '__other__';
+      $professionOtherEs = old('es.profession_other_es', $professionIsOther && $selectedProfession !== '__other__' ? $selectedProfession : '');
+      $professionOtherEn = old('es.profession_other_en', $professionIsOther ? (($en?->profession_label ?? '') ?: '') : '');
+
+      $positionEsList = collect($studyPositionOptions)->pluck('es')->filter()->values()->all();
+      $selectedPosition = old('es.position_label', $es->position_label ?? '');
+      $positionIsOther = ($selectedPosition !== '' && !in_array($selectedPosition, $positionEsList, true)) || $selectedPosition === '__other__';
+      $positionOtherEs = old('es.position_other_es', $positionIsOther && $selectedPosition !== '__other__' ? $selectedPosition : '');
+      $positionOtherEn = old('es.position_other_en', $positionIsOther ? (($en?->position_label ?? '') ?: '') : '');
     @endphp
 
     <div class="card">
@@ -382,7 +399,50 @@
               </div>
             </div>
           </div>
-          <div class="form-row"><label>Puesto</label><input type="text" name="es[position_label]" value="{{ old('es.position_label', $es->position_label ?? '') }}"></div>
+          <div class="form-row">
+            <label>Profesión</label>
+            <select name="es[profession_label]" class="taxonomy-select" data-other-prefix="profession">
+              <option value="">Seleccionar</option>
+              @foreach($professionOptions as $option)
+                <option value="{{ $option['es'] }}" @selected($selectedProfession === ($option['es'] ?? ''))>{{ $option['es'] ?? '' }}</option>
+              @endforeach
+              <option value="__other__" @selected($professionIsOther)>Other / Otro</option>
+            </select>
+            <div id="profession-other-fields" style="{{ $professionIsOther ? '' : 'display:none;' }}">
+              <div class="section-row" style="margin-top:8px;">
+                <label class="field-block">
+                  <span>Other (ES)</span>
+                  <input type="text" name="es[profession_other_es]" value="{{ $professionOtherEs }}">
+                </label>
+                <label class="field-block">
+                  <span>Other (EN)</span>
+                  <input type="text" name="es[profession_other_en]" value="{{ $professionOtherEn }}">
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Puesto</label>
+            <select name="es[position_label]" class="taxonomy-select" data-other-prefix="position">
+              <option value="">Seleccionar</option>
+              @foreach($studyPositionOptions as $option)
+                <option value="{{ $option['es'] }}" @selected($selectedPosition === ($option['es'] ?? ''))>{{ $option['es'] ?? '' }}</option>
+              @endforeach
+              <option value="__other__" @selected($positionIsOther)>Other / Otro</option>
+            </select>
+            <div id="position-other-fields" style="{{ $positionIsOther ? '' : 'display:none;' }}">
+              <div class="section-row" style="margin-top:8px;">
+                <label class="field-block">
+                  <span>Other (ES)</span>
+                  <input type="text" name="es[position_other_es]" value="{{ $positionOtherEs }}">
+                </label>
+                <label class="field-block">
+                  <span>Other (EN)</span>
+                  <input type="text" name="es[position_other_en]" value="{{ $positionOtherEn }}">
+                </label>
+              </div>
+            </div>
+          </div>
 
           <h3>Educación (ES) - Captura manual</h3>
           <div id="edu-es-wrapper">
@@ -460,11 +520,62 @@
                 <label class="field-check"><input class="ongoing-toggle" data-end-id="es-clinical-{{ $idx }}-end" type="checkbox" name="es[clinical_research][{{ $idx }}][is_ongoing]" value="1" @checked(!empty($row['is_ongoing']))> En curso</label>
                 <label class="field-block">
                   <span>Área terapéutica</span>
-                  <input type="text" name="es[clinical_research][{{ $idx }}][therapeutic_area]" value="{{ $row['therapeutic_area'] ?? '' }}">
+                  @php
+                    $rowEn = $enClinical[$idx] ?? [];
+                    $selectedTherapeutic = $row['therapeutic_area'] ?? '';
+                    $therapeuticEsList = collect($therapeuticAreaOptions)->pluck('es')->filter()->values()->all();
+                    $therapeuticIsOther = ($selectedTherapeutic !== '' && !in_array($selectedTherapeutic, $therapeuticEsList, true)) || $selectedTherapeutic === '__other__';
+                    $therapeuticOtherEs = old("es.clinical_research.$idx.therapeutic_area_other_es", $therapeuticIsOther && $selectedTherapeutic !== '__other__' ? $selectedTherapeutic : '');
+                    $therapeuticOtherEn = old("es.clinical_research.$idx.therapeutic_area_other_en", $therapeuticIsOther ? (($rowEn['therapeutic_area'] ?? '') ?: '') : '');
+                  @endphp
+                  <select name="es[clinical_research][{{ $idx }}][therapeutic_area]" class="taxonomy-select" data-other-prefix="clinical-{{ $idx }}-therapeutic">
+                    <option value="">Seleccionar</option>
+                    @foreach($therapeuticAreaOptions as $option)
+                      <option value="{{ $option['es'] }}" @selected($selectedTherapeutic === ($option['es'] ?? ''))>{{ $option['es'] ?? '' }}</option>
+                    @endforeach
+                    <option value="__other__" @selected($therapeuticIsOther)>Other / Otro</option>
+                  </select>
+                  <div id="clinical-{{ $idx }}-therapeutic-other-fields" style="{{ $therapeuticIsOther ? '' : 'display:none;' }}">
+                    <div class="section-row" style="margin-top:8px;">
+                      <label class="field-block">
+                        <span>Other (ES)</span>
+                        <input type="text" name="es[clinical_research][{{ $idx }}][therapeutic_area_other_es]" value="{{ $therapeuticOtherEs }}">
+                      </label>
+                      <label class="field-block">
+                        <span>Other (EN)</span>
+                        <input type="text" name="es[clinical_research][{{ $idx }}][therapeutic_area_other_en]" value="{{ $therapeuticOtherEn }}">
+                      </label>
+                    </div>
+                  </div>
                 </label>
                 <label class="field-block">
                   <span>Rol / Cargo</span>
-                  <input type="text" name="es[clinical_research][{{ $idx }}][role]" value="{{ $row['role'] ?? '' }}">
+                  @php
+                    $selectedRole = $row['role'] ?? '';
+                    $roleEsList = collect($studyRoleOptions)->pluck('es')->filter()->values()->all();
+                    $roleIsOther = ($selectedRole !== '' && !in_array($selectedRole, $roleEsList, true)) || $selectedRole === '__other__';
+                    $roleOtherEs = old("es.clinical_research.$idx.role_other_es", $roleIsOther && $selectedRole !== '__other__' ? $selectedRole : '');
+                    $roleOtherEn = old("es.clinical_research.$idx.role_other_en", $roleIsOther ? (($rowEn['role'] ?? '') ?: '') : '');
+                  @endphp
+                  <select name="es[clinical_research][{{ $idx }}][role]" class="taxonomy-select" data-other-prefix="clinical-{{ $idx }}-role">
+                    <option value="">Seleccionar</option>
+                    @foreach($studyRoleOptions as $option)
+                      <option value="{{ $option['es'] }}" @selected($selectedRole === ($option['es'] ?? ''))>{{ $option['es'] ?? '' }}</option>
+                    @endforeach
+                    <option value="__other__" @selected($roleIsOther)>Other / Otro</option>
+                  </select>
+                  <div id="clinical-{{ $idx }}-role-other-fields" style="{{ $roleIsOther ? '' : 'display:none;' }}">
+                    <div class="section-row" style="margin-top:8px;">
+                      <label class="field-block">
+                        <span>Other (ES)</span>
+                        <input type="text" name="es[clinical_research][{{ $idx }}][role_other_es]" value="{{ $roleOtherEs }}">
+                      </label>
+                      <label class="field-block">
+                        <span>Other (EN)</span>
+                        <input type="text" name="es[clinical_research][{{ $idx }}][role_other_en]" value="{{ $roleOtherEn }}">
+                      </label>
+                    </div>
+                  </div>
                 </label>
                 <label class="field-block">
                   <span>Fase</span>
@@ -686,6 +797,32 @@
   </div>
 
   <script>
+    const professionOptions = @json(collect($professionOptions)->pluck('es')->filter()->values()->all());
+    const studyPositionOptions = @json(collect($studyPositionOptions)->pluck('es')->filter()->values()->all());
+    const studyRoleOptions = @json(collect($studyRoleOptions)->pluck('es')->filter()->values()->all());
+    const therapeuticAreaOptions = @json(collect($therapeuticAreaOptions)->pluck('es')->filter()->values()->all());
+
+    function renderCatalogSelect(name, options, placeholder = 'Seleccionar', includeOther = false, otherPrefix = '') {
+      const opts = [`<option value="">${placeholder}</option>`]
+        .concat((options || []).map((opt) => `<option value="${opt}">${opt}</option>`));
+      if (includeOther) {
+        opts.push('<option value="__other__">Other / Otro</option>');
+      }
+      const otherAttr = otherPrefix ? ` data-other-prefix="${otherPrefix}"` : '';
+      return `<select name="${name}" class="taxonomy-select"${otherAttr}>${opts.join('')}</select>`;
+    }
+
+    function renderCatalogSelectWithOther(name, options, prefix, placeholder = 'Seleccionar') {
+      const selectHtml = renderCatalogSelect(name, options, placeholder, true, prefix);
+      return `${selectHtml}
+        <div id="${prefix}-other-fields" style="display:none;">
+          <div class="section-row" style="margin-top:8px;">
+            <label class="field-block"><span>Other (ES)</span><input type="text" name="${name.replace(/\]$/, '_other_es]')}"></label>
+            <label class="field-block"><span>Other (EN)</span><input type="text" name="${name.replace(/\]$/, '_other_en]')}"></label>
+          </div>
+        </div>`;
+    }
+
     function countryCodeToFlag(iso2) {
       const code = (iso2 || '').toUpperCase();
       if (!/^[A-Z]{2}$/.test(code)) return '🏳️';
@@ -816,11 +953,14 @@
       const row = document.createElement('div');
       row.className = 'section-row section-7';
       const endId = `${locale}-clinical-${idx}-end`;
+      const therapeuticSelectEs = renderCatalogSelectWithOther(`es[clinical_research][${idx}][therapeutic_area]`, therapeuticAreaOptions, `clinical-${idx}-therapeutic`, 'Seleccionar');
+      const roleSelectEs = renderCatalogSelectWithOther(`es[clinical_research][${idx}][role]`, studyRoleOptions, `clinical-${idx}-role`, 'Seleccionar');
       row.innerHTML = locale === 'es'
-        ? `<label class="field-block"><span>Año de inicio</span><input type="number" min="1900" max="2100" step="1" name="es[clinical_research][${idx}][start_year]"></label><label class="field-block"><span>Año de término</span><input type="number" min="1900" max="2100" step="1" id="${endId}" name="es[clinical_research][${idx}][end_year]"></label><label class="field-check"><input class="ongoing-toggle" data-end-id="${endId}" type="checkbox" name="es[clinical_research][${idx}][is_ongoing]" value="1"> En curso</label><label class="field-block"><span>Área terapéutica</span><input type="text" name="es[clinical_research][${idx}][therapeutic_area]"></label><label class="field-block"><span>Rol / Cargo</span><input type="text" name="es[clinical_research][${idx}][role]"></label><label class="field-block"><span>Fase</span><input type="text" name="es[clinical_research][${idx}][phase]"></label>`
+        ? `<label class="field-block"><span>Año de inicio</span><input type="number" min="1900" max="2100" step="1" name="es[clinical_research][${idx}][start_year]"></label><label class="field-block"><span>Año de término</span><input type="number" min="1900" max="2100" step="1" id="${endId}" name="es[clinical_research][${idx}][end_year]"></label><label class="field-check"><input class="ongoing-toggle" data-end-id="${endId}" type="checkbox" name="es[clinical_research][${idx}][is_ongoing]" value="1"> En curso</label><label class="field-block"><span>Área terapéutica</span>${therapeuticSelectEs}</label><label class="field-block"><span>Rol / Cargo</span>${roleSelectEs}</label><label class="field-block"><span>Fase</span><input type="text" name="es[clinical_research][${idx}][phase]"></label>`
         : `<label class="field-block"><span>Start year</span><input type="number" min="1900" max="2100" step="1" name="en[clinical_research][${idx}][start_year]"></label><label class="field-block"><span>End year</span><input type="number" min="1900" max="2100" step="1" id="${endId}" name="en[clinical_research][${idx}][end_year]"></label><label class="field-check"><input class="ongoing-toggle" data-end-id="${endId}" type="checkbox" name="en[clinical_research][${idx}][is_ongoing]" value="1"> Ongoing</label><label class="field-block"><span>Therapeutic area</span><input type="text" name="en[clinical_research][${idx}][therapeutic_area]"></label><label class="field-block"><span>Role</span><input type="text" name="en[clinical_research][${idx}][role]"></label><label class="field-block"><span>Phase</span><input type="text" name="en[clinical_research][${idx}][phase]"></label>`;
       wrapper.appendChild(row);
       bindOngoingToggles(row);
+      bindTaxonomyOtherToggles(row);
     }
 
     function addTrainingRow(locale) {
@@ -887,6 +1027,20 @@
       });
     }
 
+    function bindTaxonomyOtherToggles(scope = document) {
+      scope.querySelectorAll('.taxonomy-select').forEach((select) => {
+        const prefix = select.dataset.otherPrefix;
+        if (!prefix) return;
+        const wrapper = document.getElementById(`${prefix}-other-fields`);
+        if (!wrapper) return;
+        const sync = () => {
+          wrapper.style.display = select.value === '__other__' ? '' : 'none';
+        };
+        select.addEventListener('change', sync);
+        sync();
+      });
+    }
+
     bindMexPhoneField({
       inputId: 'es-office-phone-national',
       countryId: 'es-office-country',
@@ -898,6 +1052,7 @@
       hiddenCountryId: 'es-fax-country-hidden',
     });
     bindOngoingToggles();
+    bindTaxonomyOtherToggles();
   </script>
 </body>
 </html>

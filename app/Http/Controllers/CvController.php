@@ -9,7 +9,9 @@ use App\Models\CvImportJob;
 use App\Models\CvLocalization;
 use App\Models\CvDocumentSeal;
 use App\Models\CvVersion;
+use App\Models\CvTaxonomyTerm;
 use App\Models\User;
+use App\Services\TranslationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,11 +25,16 @@ use ZipArchive;
 
 class CvController extends Controller
 {
+    public function __construct(private TranslationService $translationService)
+    {
+    }
+
     public function edit(): View
     {
         $cv = $this->resolveCv();
         $cv->load(['user:id,signature_file_path', 'localizations.educations', 'localizations.gcpCertifications']);
         $localizations = $cv->localizations->keyBy('locale');
+        $taxonomyOptions = $this->taxonomyOptions();
 
         return view('cvs.edit', [
             'cv' => $cv,
@@ -38,6 +45,7 @@ class CvController extends Controller
             'degrees' => CatalogDegree::where('active', true)->orderBy('degree_type')->orderBy('name_es')->get(),
             'lastImport' => CvImportJob::where('user_id', auth()->id())->latest()->first(),
             'institutionalAddress' => config('cv.institutional_address'),
+            'taxonomyOptions' => $taxonomyOptions,
         ]);
     }
 
@@ -52,7 +60,12 @@ class CvController extends Controller
             'es.fax_number' => ['nullable', 'string', 'max:50'],
             'es.fax_number_country' => ['nullable', 'string', 'size:2'],
             'es.email' => ['nullable', 'email', 'max:180'],
+            'es.profession_label' => ['nullable', 'string', 'max:180'],
+            'es.profession_other_es' => ['nullable', 'string', 'max:180'],
+            'es.profession_other_en' => ['nullable', 'string', 'max:180'],
             'es.position_label' => ['nullable', 'string', 'max:180'],
+            'es.position_other_es' => ['nullable', 'string', 'max:180'],
+            'es.position_other_en' => ['nullable', 'string', 'max:180'],
             'es.educations' => ['nullable', 'array'],
             'es.educations.*.institution_id' => ['nullable', 'integer', 'exists:catalog_institutions,id'],
             'es.educations.*.institution_other' => ['nullable', 'string', 'max:220'],
@@ -76,7 +89,11 @@ class CvController extends Controller
             'es.clinical_research.*.end_year' => ['nullable', 'digits:4', 'integer', 'between:1900,2100'],
             'es.clinical_research.*.is_ongoing' => ['nullable', 'boolean'],
             'es.clinical_research.*.therapeutic_area' => ['nullable', 'string', 'max:220'],
+            'es.clinical_research.*.therapeutic_area_other_es' => ['nullable', 'string', 'max:220'],
+            'es.clinical_research.*.therapeutic_area_other_en' => ['nullable', 'string', 'max:220'],
             'es.clinical_research.*.role' => ['nullable', 'string', 'max:180'],
+            'es.clinical_research.*.role_other_es' => ['nullable', 'string', 'max:180'],
+            'es.clinical_research.*.role_other_en' => ['nullable', 'string', 'max:180'],
             'es.clinical_research.*.phase' => ['nullable', 'string', 'max:60'],
             'es.trainings' => ['nullable', 'array'],
             'es.trainings.*.course' => ['nullable', 'string', 'max:220'],
@@ -101,6 +118,7 @@ class CvController extends Controller
             'en.fax_number' => ['nullable', 'string', 'max:50'],
             'en.fax_number_country' => ['nullable', 'string', 'size:2'],
             'en.email' => ['nullable', 'email', 'max:180'],
+            'en.profession_label' => ['nullable', 'string', 'max:180'],
             'en.position_label' => ['nullable', 'string', 'max:180'],
             'en.educations' => ['nullable', 'array'],
             'en.educations.*.institution_id' => ['nullable', 'integer', 'exists:catalog_institutions,id'],
@@ -129,7 +147,7 @@ class CvController extends Controller
             'en.clinical_research.*.phase' => ['nullable', 'string', 'max:60'],
             'en.trainings' => ['nullable', 'array'],
             'en.trainings.*.course' => ['nullable', 'string', 'max:220'],
-            'en.trainings.*.modality' => ['nullable', 'string', 'in:online,presencial'],
+            'en.trainings.*.modality' => ['nullable', 'string', 'in:online,presencial,in-person'],
             'en.trainings.*.start_year' => ['nullable', 'date_format:Y-m-d'],
             'en.trainings.*.end_year' => ['nullable', 'date_format:Y-m-d'],
             'en.trainings.*.is_ongoing' => ['nullable', 'boolean'],
@@ -144,8 +162,31 @@ class CvController extends Controller
             'en.gcps.*.no_expiration' => ['nullable', 'boolean'],
         ]);
 
+        $otherErrors = [];
+        $esInput = $data['es'] ?? [];
+        if (($esInput['profession_label'] ?? null) === '__other__' && trim((string) ($esInput['profession_other_es'] ?? '')) === '') {
+            $otherErrors['es.profession_other_es'] = 'Captura el valor ES para profesión cuando eliges Other.';
+        }
+        if (($esInput['position_label'] ?? null) === '__other__' && trim((string) ($esInput['position_other_es'] ?? '')) === '') {
+            $otherErrors['es.position_other_es'] = 'Captura el valor ES para puesto cuando eliges Other.';
+        }
+        foreach (($esInput['clinical_research'] ?? []) as $index => $row) {
+            if (($row['therapeutic_area'] ?? null) === '__other__' && trim((string) ($row['therapeutic_area_other_es'] ?? '')) === '') {
+                $otherErrors["es.clinical_research.$index.therapeutic_area_other_es"] = 'Captura el valor ES del área terapéutica cuando eliges Other.';
+            }
+            if (($row['role'] ?? null) === '__other__' && trim((string) ($row['role_other_es'] ?? '')) === '') {
+                $otherErrors["es.clinical_research.$index.role_other_es"] = 'Captura el valor ES del rol cuando eliges Other.';
+            }
+        }
+
+        if ($otherErrors !== []) {
+            return redirect('/cvs/me')->withInput()->withErrors($otherErrors);
+        }
+
         $cv = $this->resolveCv();
-        $payloads = ['es' => $data['es'] ?? [], 'en' => $data['es'] ?? []];
+        [$payloadEs, $manualEnOverrides] = $this->normalizeEsTaxonomySelections($data['es'] ?? []);
+        $payloadEn = $this->translatePayloadToEnglish($payloadEs, $manualEnOverrides);
+        $payloads = ['es' => $payloadEs, 'en' => $payloadEn];
 
         $rawEsOfficePhone = $payloads['es']['office_phone'] ?? null;
         $rawEnOfficePhone = $payloads['en']['office_phone'] ?? null;
@@ -198,6 +239,7 @@ class CvController extends Controller
                         'office_phone' => $payload['office_phone'] ?? null,
                         'fax_number' => $payload['fax_number'] ?? null,
                         'email' => $payload['email'] ?? null,
+                        'profession_label' => $payload['profession_label'] ?? null,
                         'position_label' => $payload['position_label'] ?? null,
                         'summary_text' => $payload['summary_text'] ?? null,
                         'professional_experience_json' => $this->normalizeRows(
@@ -330,6 +372,7 @@ class CvController extends Controller
                         'office_phone' => $row['office_phone'] ?? null,
                         'fax_number' => $row['fax_number'] ?? null,
                         'email' => $row['email'] ?? null,
+                        'profession_label' => $row['profession_label'] ?? null,
                         'position_label' => $row['position_label'] ?? null,
                         'summary_text' => $row['summary_text'] ?? null,
                         'professional_experience_json' => $row['professional_experience_json'] ?? [],
@@ -569,6 +612,7 @@ class CvController extends Controller
                 'office_phone' => 'TELÉFONO OFICINA',
                 'fax' => 'FAX NUMBER',
                 'email' => 'CORREO ELECTRÓNICO',
+                'profession' => 'PROFESIÓN',
                 'position' => 'PUESTO A DESEMPEÑAR EN EL ESTUDIO',
                 'education' => 'EDUCACIÓN',
                 'professional' => 'EXPERIENCIA PROFESIONAL',
@@ -608,6 +652,7 @@ class CvController extends Controller
                 'office_phone' => 'TELEPHONE NUMBER',
                 'fax' => 'FAX NUMBER',
                 'email' => 'E-MAIL',
+                'profession' => 'PROFESSION',
                 'position' => 'POSITION',
                 'education' => 'EDUCATION AND TRAINING',
                 'professional' => 'PROFESSIONAL EXPERIENCE',
@@ -697,6 +742,231 @@ class CvController extends Controller
         ]);
     }
 
+    private function translatePayloadToEnglish(array $es, array $manualEnOverrides = []): array
+    {
+        $en = $es;
+        $toTranslate = [];
+
+        $add = function (string $path, mixed $value) use (&$toTranslate, $manualEnOverrides, &$en): void {
+            if (isset($manualEnOverrides[$path])) {
+                $this->setNestedValue($en, $path, (string) $manualEnOverrides[$path]);
+                return;
+            }
+
+            $v = trim((string) ($value ?? ''));
+            if ($v !== '') {
+                $toTranslate[$path] = $v;
+            }
+        };
+
+        $add('profession_label', $es['profession_label'] ?? null);
+        $add('position_label', $es['position_label'] ?? null);
+        $add('summary_text', $es['summary_text'] ?? null);
+
+        foreach (($es['educations'] ?? []) as $i => $row) {
+            $add("educations.$i.institution_other", $row['institution_other'] ?? null);
+            $add("educations.$i.place", $row['place'] ?? null);
+            $add("educations.$i.degree_other", $row['degree_other'] ?? null);
+        }
+
+        foreach (($es['professional_experience'] ?? []) as $i => $row) {
+            $add("professional_experience.$i.institution", $row['institution'] ?? null);
+            $add("professional_experience.$i.position", $row['position'] ?? null);
+        }
+
+        foreach (($es['clinical_research'] ?? []) as $i => $row) {
+            $add("clinical_research.$i.therapeutic_area", $row['therapeutic_area'] ?? null);
+            $add("clinical_research.$i.role", $row['role'] ?? null);
+        }
+
+        foreach (($es['trainings'] ?? []) as $i => $row) {
+            $add("trainings.$i.course", $row['course'] ?? null);
+        }
+
+        foreach (($es['gcps'] ?? []) as $i => $row) {
+            $add("gcps.$i.course_name", $row['course_name'] ?? null);
+        }
+
+        $translatedMap = $this->translationService->translateMap($toTranslate, 'es', 'en');
+        foreach ($translatedMap as $path => $translatedValue) {
+            $this->setNestedValue($en, $path, $translatedValue);
+        }
+
+        foreach (($en['trainings'] ?? []) as $i => $row) {
+            $modality = Str::lower(trim((string) ($row['modality'] ?? '')));
+            if ($modality === 'presencial') {
+                $en['trainings'][$i]['modality'] = 'in-person';
+            } elseif ($modality === 'en linea' || $modality === 'en línea' || $modality === 'online') {
+                $en['trainings'][$i]['modality'] = 'online';
+            }
+        }
+
+        return $en;
+    }
+
+    /**
+     * @return array{0: array<string, mixed>, 1: array<string, string>}
+     */
+    private function normalizeEsTaxonomySelections(array $es): array
+    {
+        $overrides = [];
+        $professionMap = $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_PROFESSIONS);
+        $positionMap = $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_STUDY_POSITIONS);
+        $roleMap = $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_STUDY_ROLES);
+        $therapeuticMap = $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_THERAPEUTIC_AREAS);
+
+        [$professionEs, $professionEn] = $this->resolveTaxonomyValue(
+            $es['profession_label'] ?? null,
+            $es['profession_other_es'] ?? null,
+            $es['profession_other_en'] ?? null,
+            $professionMap
+        );
+        $es['profession_label'] = $professionEs ?: null;
+        unset($es['profession_other_es'], $es['profession_other_en']);
+        if ($professionEn !== '') {
+            $overrides['profession_label'] = $professionEn;
+        }
+
+        [$positionEs, $positionEn] = $this->resolveTaxonomyValue(
+            $es['position_label'] ?? null,
+            $es['position_other_es'] ?? null,
+            $es['position_other_en'] ?? null,
+            $positionMap
+        );
+        $es['position_label'] = $positionEs ?: null;
+        unset($es['position_other_es'], $es['position_other_en']);
+        if ($positionEn !== '') {
+            $overrides['position_label'] = $positionEn;
+        }
+
+        foreach (($es['clinical_research'] ?? []) as $i => $row) {
+            [$therapeuticEs, $therapeuticEn] = $this->resolveTaxonomyValue(
+                $row['therapeutic_area'] ?? null,
+                $row['therapeutic_area_other_es'] ?? null,
+                $row['therapeutic_area_other_en'] ?? null,
+                $therapeuticMap
+            );
+            $es['clinical_research'][$i]['therapeutic_area'] = $therapeuticEs ?: null;
+            unset(
+                $es['clinical_research'][$i]['therapeutic_area_other_es'],
+                $es['clinical_research'][$i]['therapeutic_area_other_en']
+            );
+            if ($therapeuticEn !== '') {
+                $overrides["clinical_research.$i.therapeutic_area"] = $therapeuticEn;
+            }
+
+            [$roleEs, $roleEn] = $this->resolveTaxonomyValue(
+                $row['role'] ?? null,
+                $row['role_other_es'] ?? null,
+                $row['role_other_en'] ?? null,
+                $roleMap
+            );
+            $es['clinical_research'][$i]['role'] = $roleEs ?: null;
+            unset(
+                $es['clinical_research'][$i]['role_other_es'],
+                $es['clinical_research'][$i]['role_other_en']
+            );
+            if ($roleEn !== '') {
+                $overrides["clinical_research.$i.role"] = $roleEn;
+            }
+        }
+
+        return [$es, $overrides];
+    }
+
+    /**
+     * @param array<string, string> $map
+     * @return array{0: string, 1: string}
+     */
+    private function resolveTaxonomyValue(mixed $selected, mixed $otherEs, mixed $otherEn, array $map): array
+    {
+        $selectedValue = trim((string) $selected);
+        $otherValueEs = trim((string) $otherEs);
+        $otherValueEn = trim((string) $otherEn);
+
+        if ($selectedValue === '__other__') {
+            return [$otherValueEs, $otherValueEn];
+        }
+
+        if ($selectedValue === '') {
+            return ['', ''];
+        }
+
+        $mapped = $map[mb_strtolower($selectedValue)] ?? '';
+        return [$selectedValue, $mapped];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function taxonomyEsEnMap(string $taxonomyType): array
+    {
+        $map = [];
+        CvTaxonomyTerm::query()
+            ->where('taxonomy_type', $taxonomyType)
+            ->where('active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name_es')
+            ->get(['name_es', 'name_en'])
+            ->each(function (CvTaxonomyTerm $term) use (&$map): void {
+                $es = trim((string) $term->name_es);
+                $en = trim((string) $term->name_en);
+                if ($es !== '' && $en !== '') {
+                    $map[mb_strtolower($es)] = $en;
+                }
+            });
+
+        return $map;
+    }
+
+    /**
+     * @return array<string, array<int, array{es: string, en: string}>>
+     */
+    private function taxonomyOptions(): array
+    {
+        $grouped = CvTaxonomyTerm::query()
+            ->where('active', true)
+            ->orderBy('taxonomy_type')
+            ->orderBy('sort_order')
+            ->orderBy('name_es')
+            ->get()
+            ->groupBy('taxonomy_type');
+
+        $options = [];
+        foreach (CvTaxonomyTerm::availableTypes() as $type) {
+            $options[$type] = ($grouped->get($type) ?? collect())
+                ->map(fn (CvTaxonomyTerm $term) => [
+                    'es' => $term->name_es,
+                    'en' => $term->name_en ?: $term->name_es,
+                ])
+                ->values()
+                ->all();
+        }
+
+        return $options;
+    }
+
+    private function setNestedValue(array &$target, string $path, string $value): void
+    {
+        $segments = explode('.', $path);
+        $cursor = &$target;
+
+        foreach ($segments as $idx => $segment) {
+            $isLast = $idx === count($segments) - 1;
+
+            if ($isLast) {
+                $cursor[$segment] = $value;
+                return;
+            }
+
+            if (! isset($cursor[$segment]) || ! is_array($cursor[$segment])) {
+                $cursor[$segment] = [];
+            }
+
+            $cursor = &$cursor[$segment];
+        }
+    }
+
     private function normalizeRows(array $rows, array $allowedKeys): array
     {
         $normalized = [];
@@ -779,6 +1049,7 @@ class CvController extends Controller
                 'office_phone' => $loc->office_phone,
                 'fax_number' => $loc->fax_number,
                 'email' => $loc->email,
+                'profession_label' => $loc->profession_label,
                 'position_label' => $loc->position_label,
                 'summary_text' => $loc->summary_text,
                 'professional_experience_json' => $loc->professional_experience_json ?? [],
@@ -878,6 +1149,7 @@ class CvController extends Controller
             'office_phone' => $loc->office_phone,
             'fax_number' => $loc->fax_number,
             'email' => $loc->email,
+            'profession_label' => $loc->profession_label,
             'position_label' => $loc->position_label,
             'summary_text' => $loc->summary_text,
             'address' => config('cv.institutional_address'),

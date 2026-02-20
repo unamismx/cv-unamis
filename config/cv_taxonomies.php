@@ -1,0 +1,56 @@
+<?php
+
+return [
+    'study_positions' => [
+        ['es' => 'Investigador principal', 'en' => 'Principal Investigator'],
+        ['es' => 'Subinvestigador', 'en' => 'Subinvestigator'],
+        ['es' => 'Coordinador de estudio', 'en' => 'Study Coordinator'],
+        ['es' => 'Coordinador clínico', 'en' => 'Clinical Coordinator'],
+        ['es' => 'Médico tratante', 'en' => 'Treating Physician'],
+        ['es' => 'Médico investigador', 'en' => 'Research Physician'],
+        ['es' => 'Enfermería de investigación', 'en' => 'Research Nurse'],
+        ['es' => 'Químico farmacobiólogo', 'en' => 'Clinical Laboratory Specialist'],
+        ['es' => 'Farmacéutico de investigación', 'en' => 'Research Pharmacist'],
+        ['es' => 'Monitor clínico', 'en' => 'Clinical Monitor'],
+        ['es' => 'Data manager', 'en' => 'Data Manager'],
+    ],
+
+    'study_roles' => [
+        ['es' => 'Investigador principal', 'en' => 'Principal Investigator'],
+        ['es' => 'Subinvestigador', 'en' => 'Subinvestigator'],
+        ['es' => 'Coordinador de estudio', 'en' => 'Study Coordinator'],
+        ['es' => 'Coordinador clínico', 'en' => 'Clinical Coordinator'],
+        ['es' => 'Médico tratante', 'en' => 'Treating Physician'],
+        ['es' => 'Médico investigador', 'en' => 'Research Physician'],
+        ['es' => 'Enfermería de investigación', 'en' => 'Research Nurse'],
+        ['es' => 'Evaluador de seguridad', 'en' => 'Safety Assessor'],
+        ['es' => 'Evaluador de eficacia', 'en' => 'Efficacy Assessor'],
+        ['es' => 'Investigador de laboratorio', 'en' => 'Laboratory Investigator'],
+        ['es' => 'Data manager', 'en' => 'Data Manager'],
+    ],
+
+    'therapeutic_areas' => [
+        ['es' => 'Diabetes mellitus tipo 2', 'en' => 'Type 2 Diabetes Mellitus'],
+        ['es' => 'Diabetes mellitus tipo 1', 'en' => 'Type 1 Diabetes Mellitus'],
+        ['es' => 'Obesidad', 'en' => 'Obesity'],
+        ['es' => 'Hipertensión arterial', 'en' => 'Hypertension'],
+        ['es' => 'Dislipidemia', 'en' => 'Dyslipidemia'],
+        ['es' => 'Enfermedad cardiovascular', 'en' => 'Cardiovascular Disease'],
+        ['es' => 'Nefrología', 'en' => 'Nephrology'],
+        ['es' => 'Hepatología', 'en' => 'Hepatology'],
+        ['es' => 'Gastroenterología', 'en' => 'Gastroenterology'],
+        ['es' => 'Neumología', 'en' => 'Pulmonology'],
+        ['es' => 'Neurología', 'en' => 'Neurology'],
+        ['es' => 'Psiquiatría', 'en' => 'Psychiatry'],
+        ['es' => 'Dermatología', 'en' => 'Dermatology'],
+        ['es' => 'Reumatología', 'en' => 'Rheumatology'],
+        ['es' => 'Artritis reumatoide', 'en' => 'Rheumatoid Arthritis'],
+        ['es' => 'Lupus eritematoso sistémico', 'en' => 'Systemic Lupus Erythematosus'],
+        ['es' => 'Infectología', 'en' => 'Infectious Diseases'],
+        ['es' => 'Vacunas', 'en' => 'Vaccines'],
+        ['es' => 'Oncología', 'en' => 'Oncology'],
+        ['es' => 'Hematología', 'en' => 'Hematology'],
+        ['es' => 'Endocrinología', 'en' => 'Endocrinology'],
+    ],
+];
+
