@@ -76,6 +76,8 @@ class CvController extends Controller
             'es.educations.*.completion_date' => ['nullable', 'date_format:Y-m-d'],
             'es.educations.*.degree_id' => ['nullable', 'integer', 'exists:catalog_degrees,id'],
             'es.educations.*.degree_other' => ['nullable', 'string', 'max:220'],
+            'es.educations.*.degree_other_es' => ['nullable', 'string', 'max:220'],
+            'es.educations.*.degree_other_en' => ['nullable', 'string', 'max:220'],
             'es.educations.*.license_number' => ['nullable', 'string', 'max:120'],
             'es.educations.*.license_not_applicable' => ['nullable', 'boolean'],
             'es.professional_experience' => ['nullable', 'array'],
@@ -176,6 +178,11 @@ class CvController extends Controller
             }
             if (($row['role'] ?? null) === '__other__' && trim((string) ($row['role_other_es'] ?? '')) === '') {
                 $otherErrors["es.clinical_research.$index.role_other_es"] = 'Captura el valor ES del rol cuando eliges Other.';
+            }
+        }
+        foreach (($esInput['educations'] ?? []) as $index => $row) {
+            if (($row['degree_other'] ?? null) === '__other__' && trim((string) ($row['degree_other_es'] ?? '')) === '') {
+                $otherErrors["es.educations.$index.degree_other_es"] = 'Captura el valor ES del grado obtenido cuando eliges Other.';
             }
         }
 
@@ -814,6 +821,7 @@ class CvController extends Controller
         $positionMap = $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_STUDY_POSITIONS);
         $roleMap = $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_STUDY_ROLES);
         $therapeuticMap = $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_THERAPEUTIC_AREAS);
+        $educationDegreeMap = $this->taxonomyEsEnMap(CvTaxonomyTerm::TYPE_EDUCATION_DEGREES);
 
         [$professionEs, $professionEn] = $this->resolveTaxonomyValue(
             $es['profession_label'] ?? null,
@@ -837,6 +845,23 @@ class CvController extends Controller
         unset($es['position_other_es'], $es['position_other_en']);
         if ($positionEn !== '') {
             $overrides['position_label'] = $positionEn;
+        }
+
+        foreach (($es['educations'] ?? []) as $i => $row) {
+            [$degreeEs, $degreeEn] = $this->resolveTaxonomyValue(
+                $row['degree_other'] ?? null,
+                $row['degree_other_es'] ?? null,
+                $row['degree_other_en'] ?? null,
+                $educationDegreeMap
+            );
+            $es['educations'][$i]['degree_other'] = $degreeEs ?: null;
+            unset(
+                $es['educations'][$i]['degree_other_es'],
+                $es['educations'][$i]['degree_other_en']
+            );
+            if ($degreeEn !== '') {
+                $overrides["educations.$i.degree_other"] = $degreeEn;
+            }
         }
 
         foreach (($es['clinical_research'] ?? []) as $i => $row) {

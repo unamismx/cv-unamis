@@ -82,6 +82,7 @@ class CvTaxonomyController extends Controller
             CvTaxonomyTerm::TYPE_STUDY_POSITIONS => 'Puesto en estudio',
             CvTaxonomyTerm::TYPE_STUDY_ROLES => 'Rol en investigación',
             CvTaxonomyTerm::TYPE_THERAPEUTIC_AREAS => 'Indicación terapéutica',
+            CvTaxonomyTerm::TYPE_EDUCATION_DEGREES => 'Grado obtenido (Educación)',
         ];
     }
 }

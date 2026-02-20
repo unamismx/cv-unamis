@@ -257,6 +257,7 @@
       $studyPositionOptions = $taxonomyOptions['study_positions'] ?? [];
       $studyRoleOptions = $taxonomyOptions['study_roles'] ?? [];
       $therapeuticAreaOptions = $taxonomyOptions['therapeutic_areas'] ?? [];
+      $educationDegreeOptions = $taxonomyOptions['education_degrees'] ?? [];
 
       $rawTitleName = trim((string) old('es.title_name', $es->title_name ?? ''));
       $esTitlePrefix = '';
@@ -448,6 +449,14 @@
           <div id="edu-es-wrapper">
             @foreach($esEducations as $idx => $row)
               <div class="edu-row">
+                @php
+                  $eduRowEn = $enEducations[$idx] ?? [];
+                  $selectedEducationDegree = $row['degree_other'] ?? '';
+                  $educationDegreeEsList = collect($educationDegreeOptions)->pluck('es')->filter()->values()->all();
+                  $educationDegreeIsOther = ($selectedEducationDegree !== '' && !in_array($selectedEducationDegree, $educationDegreeEsList, true)) || $selectedEducationDegree === '__other__';
+                  $educationDegreeOtherEs = old("es.educations.$idx.degree_other_es", $educationDegreeIsOther && $selectedEducationDegree !== '__other__' ? $selectedEducationDegree : '');
+                  $educationDegreeOtherEn = old("es.educations.$idx.degree_other_en", $educationDegreeIsOther ? (($eduRowEn['degree_other'] ?? '') ?: '') : '');
+                @endphp
                 <label class="field-block wide">
                   <span>Universidad / Escuela</span>
                   <input type="text" name="es[educations][{{ $idx }}][institution_other]" value="{{ $row['institution_other'] ?? '' }}">
@@ -467,7 +476,25 @@
                 <label class="field-check"><input class="ongoing-toggle" data-end-id="es-educations-{{ $idx }}-end" type="checkbox" name="es[educations][{{ $idx }}][is_ongoing]" value="1" @checked(!empty($row['is_ongoing']))> En curso</label>
                 <label class="field-block wide">
                   <span>Grado obtenido</span>
-                  <input type="text" name="es[educations][{{ $idx }}][degree_other]" value="{{ $row['degree_other'] ?? '' }}">
+                  <select name="es[educations][{{ $idx }}][degree_other]" class="taxonomy-select" data-other-prefix="education-{{ $idx }}-degree">
+                    <option value="">Seleccionar</option>
+                    @foreach($educationDegreeOptions as $option)
+                      <option value="{{ $option['es'] }}" @selected($selectedEducationDegree === ($option['es'] ?? ''))>{{ $option['es'] ?? '' }}</option>
+                    @endforeach
+                    <option value="__other__" @selected($educationDegreeIsOther)>Other / Otro</option>
+                  </select>
+                  <div id="education-{{ $idx }}-degree-other-fields" style="{{ $educationDegreeIsOther ? '' : 'display:none;' }}">
+                    <div class="section-row" style="margin-top:8px;">
+                      <label class="field-block">
+                        <span>Other (ES)</span>
+                        <input type="text" name="es[educations][{{ $idx }}][degree_other_es]" value="{{ $educationDegreeOtherEs }}">
+                      </label>
+                      <label class="field-block">
+                        <span>Other (EN)</span>
+                        <input type="text" name="es[educations][{{ $idx }}][degree_other_en]" value="{{ $educationDegreeOtherEn }}">
+                      </label>
+                    </div>
+                  </div>
                 </label>
                 <label class="field-block">
                   <span>Cédula o registro</span>
@@ -801,6 +828,7 @@
     const studyPositionOptions = @json(collect($studyPositionOptions)->pluck('es')->filter()->values()->all());
     const studyRoleOptions = @json(collect($studyRoleOptions)->pluck('es')->filter()->values()->all());
     const therapeuticAreaOptions = @json(collect($therapeuticAreaOptions)->pluck('es')->filter()->values()->all());
+    const educationDegreeOptions = @json(collect($educationDegreeOptions)->pluck('es')->filter()->values()->all());
 
     function renderCatalogSelect(name, options, placeholder = 'Seleccionar', includeOther = false, otherPrefix = '') {
       const opts = [`<option value="">${placeholder}</option>`]
@@ -920,18 +948,22 @@
       row.className = 'edu-row';
       const endId = `${locale}-educations-${idx}-end`;
       const licenseId = `${locale}-educations-${idx}-license`;
+      const degreeSelect = locale === 'es'
+        ? renderCatalogSelectWithOther(`es[educations][${idx}][degree_other]`, educationDegreeOptions, `education-${idx}-degree`, 'Seleccionar')
+        : `<input type="text" name="${locale}[educations][${idx}][degree_other]">`;
       row.innerHTML = `
         <label class="field-block wide"><span>${institutionLabel}</span><input type="text" name="${locale}[educations][${idx}][institution_other]"></label>
         <label class="field-block"><span>${placeLabel}</span><input type="text" name="${locale}[educations][${idx}][place]"></label>
         <label class="field-block"><span>${startLabel}</span><input type="date" name="${locale}[educations][${idx}][start_date]"></label>
         <label class="field-block"><span>${endLabel}</span><input type="date" id="${endId}" name="${locale}[educations][${idx}][end_date]"></label>
         <label class="field-check"><input class="ongoing-toggle" data-end-id="${endId}" type="checkbox" name="${locale}[educations][${idx}][is_ongoing]" value="1"> ${ongoingLabel}</label>
-        <label class="field-block wide"><span>${degreeLabel}</span><input type="text" name="${locale}[educations][${idx}][degree_other]"></label>
+        <label class="field-block wide"><span>${degreeLabel}</span>${degreeSelect}</label>
         <label class="field-block"><span>${licenseLabel}</span><input type="text" id="${licenseId}" name="${locale}[educations][${idx}][license_number]"></label>
         <label class="field-check"><input class="ongoing-toggle" data-end-id="${licenseId}" type="checkbox" name="${locale}[educations][${idx}][license_not_applicable]" value="1"> ${notApplyLabel}</label>
       `;
       wrapper.appendChild(row);
       bindOngoingToggles(row);
+      bindTaxonomyOtherToggles(row);
     }
 
     function addProfessionalRow(locale) {

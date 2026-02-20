@@ -13,6 +13,7 @@ class CvTaxonomyTerm extends Model
     public const TYPE_STUDY_POSITIONS = 'study_positions';
     public const TYPE_STUDY_ROLES = 'study_roles';
     public const TYPE_THERAPEUTIC_AREAS = 'therapeutic_areas';
+    public const TYPE_EDUCATION_DEGREES = 'education_degrees';
 
     protected $fillable = [
         'taxonomy_type',
@@ -37,6 +38,7 @@ class CvTaxonomyTerm extends Model
             self::TYPE_STUDY_POSITIONS,
             self::TYPE_STUDY_ROLES,
             self::TYPE_THERAPEUTIC_AREAS,
+            self::TYPE_EDUCATION_DEGREES,
         ];
     }
 }

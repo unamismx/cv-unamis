@@ -69,6 +69,19 @@ return new class extends Migration
                 ['es' => 'Vacunas', 'en' => 'Vaccines'],
                 ['es' => 'Infectología', 'en' => 'Infectious Diseases'],
             ],
+            CvTaxonomyTerm::TYPE_EDUCATION_DEGREES => [
+                ['es' => 'Licenciatura en Médico Cirujano', 'en' => 'Bachelor in Medical Doctor and Surgeon'],
+                ['es' => 'Licenciatura en Enfermería', 'en' => 'Bachelor in Nursing'],
+                ['es' => 'Licenciatura en Nutrición', 'en' => 'Bachelor in Nutrition'],
+                ['es' => 'Licenciatura en Psicología', 'en' => 'Bachelor in Psychology'],
+                ['es' => 'Licenciatura en Odontología', 'en' => 'Bachelor in Dentistry'],
+                ['es' => 'Licenciatura en Químico Farmacéutico Biólogo', 'en' => 'Bachelor in Pharmaceutical Chemist Biologist'],
+                ['es' => 'Especialidad Médica', 'en' => 'Medical Specialty'],
+                ['es' => 'Maestría', 'en' => 'Master Degree'],
+                ['es' => 'Doctorado', 'en' => 'Doctoral Degree'],
+                ['es' => 'Técnico en Enfermería', 'en' => 'Nursing Technician'],
+                ['es' => 'Bachillerato', 'en' => 'High School Diploma'],
+            ],
         ];
 
         foreach ($seed as $type => $rows) {
