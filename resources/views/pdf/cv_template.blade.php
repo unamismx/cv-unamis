@@ -88,7 +88,7 @@
 <body>
   @php
     $rawFullName = trim((string) ($loc->title_name ?? ''));
-    $titleCandidates = ['Dr.', 'Dra.', 'Enf.', 'Lic.', 'Ing.', 'Mtro.', 'Mtra.', 'QFB', 'Q.F.B.'];
+    $titleCandidates = ['Dr.', 'Dra.', 'Enf.', 'Lic.', 'Ing.', 'Mtro.', 'Mtra.', 'QFB', 'Q.F.B.', 'Br.', 'Br'];
     $professionalTitle = '-';
     $professionalName = $rawFullName ?: '-';
     foreach ($titleCandidates as $candidate) {
@@ -96,6 +96,14 @@
             $professionalTitle = $candidate;
             $professionalName = trim(substr($rawFullName, strlen($candidate)));
             break;
+        }
+    }
+    if ($professionalTitle === '-' && preg_match('/^(\S{1,12}\.?)\s+(.+)$/u', $rawFullName, $m)) {
+        $candidate = trim((string) $m[1]);
+        $rest = trim((string) $m[2]);
+        if ($rest !== '' && (str_ends_with($candidate, '.') || in_array($candidate, $titleCandidates, true))) {
+            $professionalTitle = $candidate;
+            $professionalName = $rest;
         }
     }
 

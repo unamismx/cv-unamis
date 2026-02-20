@@ -268,11 +268,20 @@
       $rawTitleName = trim((string) old('es.title_name', $es->title_name ?? ''));
       $esTitlePrefix = '';
       $esFullName = $rawTitleName;
-      foreach (['Dr.', 'Dra.', 'Enf.', 'Lic.', 'Ing.', 'Mtro.', 'Mtra.', 'QFB', 'Q.F.B.'] as $titleOption) {
+      $knownTitleOptions = ['Dr.', 'Dra.', 'Enf.', 'Lic.', 'Ing.', 'Mtro.', 'Mtra.', 'QFB', 'Q.F.B.', 'Br.', 'Br'];
+      foreach ($knownTitleOptions as $titleOption) {
         if (str_starts_with($rawTitleName, $titleOption . ' ')) {
           $esTitlePrefix = $titleOption;
           $esFullName = trim(substr($rawTitleName, strlen($titleOption)));
           break;
+        }
+      }
+      if ($esTitlePrefix === '' && preg_match('/^(\S{1,12}\.?)\s+(.+)$/u', $rawTitleName, $m)) {
+        $candidate = trim((string) $m[1]);
+        $rest = trim((string) $m[2]);
+        if ($rest !== '' && (str_ends_with($candidate, '.') || in_array($candidate, $knownTitleOptions, true))) {
+          $esTitlePrefix = $candidate;
+          $esFullName = $rest;
         }
       }
       $esTitlePrefix = old('es.title_prefix', $esTitlePrefix);
@@ -883,10 +892,30 @@
         </div>`;
     }
 
-    function countryCodeToFlag(iso2) {
+    function countryFlag(iso2) {
       const code = (iso2 || '').toUpperCase();
-      if (!/^[A-Z]{2}$/.test(code)) return '🏳️';
-      return String.fromCodePoint(...[...code].map((c) => 127397 + c.charCodeAt(0)));
+      if (!/^[A-Z]{2}$/.test(code)) return '';
+      try {
+        return String.fromCodePoint(...[...code].map((c) => 127397 + c.charCodeAt(0)));
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function countryLabel(iso2) {
+      const code = (iso2 || '').toUpperCase();
+      if (!/^[A-Z]{2}$/.test(code)) return code || '-';
+      const flag = countryFlag(code);
+      let countryName = '';
+      try {
+        if (typeof Intl.DisplayNames === 'function') {
+          const names = new Intl.DisplayNames(['es'], { type: 'region' });
+          const country = names.of(code);
+          if (country && country !== code) countryName = country;
+        }
+      } catch (e) {}
+      const suffix = countryName ? `${code} - ${countryName}` : code;
+      return flag ? `${flag} ${suffix}` : suffix;
     }
 
     function buildCountryOptions(select, selectedCode) {
@@ -915,7 +944,7 @@
       options.forEach((code) => {
         const opt = document.createElement('option');
         opt.value = code;
-        opt.textContent = `${countryCodeToFlag(code)} ${code}`;
+        opt.textContent = countryLabel(code);
         if (code === current) opt.selected = true;
         select.appendChild(opt);
       });
@@ -923,7 +952,7 @@
       if (![...select.options].some((o) => o.value === current)) {
         const mx = document.createElement('option');
         mx.value = current;
-        mx.textContent = `${countryCodeToFlag(current)} ${current}`;
+        mx.textContent = countryLabel(current);
         mx.selected = true;
         select.insertBefore(mx, select.firstChild);
       }
