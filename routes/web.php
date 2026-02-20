@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CvDocumentRepositoryController;
 use App\Http\Controllers\CvController;
 use App\Http\Controllers\CvTaxonomyController;
 use App\Http\Controllers\DashboardController;
@@ -29,6 +30,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/cvs/published', [CvController::class, 'publishedIndex']);
     Route::get('/cvs/published/{cv}/pdf/{locale}', [CvController::class, 'downloadPublishedPdf']);
     Route::delete('/cvs/published/{cv}', [CvController::class, 'destroyPublished']);
+    Route::get('/cvs/documents', [CvDocumentRepositoryController::class, 'index']);
+    Route::post('/cvs/documents', [CvDocumentRepositoryController::class, 'store']);
+    Route::get('/cvs/documents/{document}/download', [CvDocumentRepositoryController::class, 'download']);
+    Route::delete('/cvs/documents/{document}', [CvDocumentRepositoryController::class, 'destroy']);
     Route::put('/cvs/me', [CvController::class, 'update']);
     Route::post('/cvs/me/import', [CvController::class, 'importWord']);
     Route::post('/cvs/me/versions/{version}/restore', [CvController::class, 'restoreVersion']);

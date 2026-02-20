@@ -14,6 +14,7 @@
       <a class="ws-nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard">Inicio</a>
       <a class="ws-nav-link {{ request()->is('cvs/me') ? 'active' : '' }}" href="/cvs/me">Mi CV</a>
       <a class="ws-nav-link {{ request()->is('cvs/published*') ? 'active' : '' }}" href="/cvs/published">CV Publicados</a>
+      <a class="ws-nav-link {{ request()->is('cvs/documents*') ? 'active' : '' }}" href="/cvs/documents">Repositorio</a>
       @if($user?->canManageCvTaxonomies())
         <a class="ws-nav-link {{ request()->is('admin/cv-taxonomies*') ? 'active' : '' }}" href="/admin/cv-taxonomies">Catálogos CV</a>
       @endif

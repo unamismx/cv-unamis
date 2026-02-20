@@ -46,6 +46,11 @@ class User extends Authenticatable
         return $this->hasMany(SignatureCaptureLink::class);
     }
 
+    public function cvSupportDocuments(): HasMany
+    {
+        return $this->hasMany(CvSupportDocument::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
